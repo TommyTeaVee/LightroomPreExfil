@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JPEG Preset Extractor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #result {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background-color: #f8f9fa;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>JPEG Preset Extractor</h1>
+  <form id="uploadForm">
+    <label for="fileInput">Upload a JPEG file:</label>
+    <input type="file" id="fileInput" accept="image/jpeg">
+    <button type="submit">Extract</button>
+  </form>
+
+  <div id="result"></div>
+
+  <button id="downloadButton" style="display: none;">Download Presets</button>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const resultDiv = document.getElementById('result');
+    const downloadButton = document.getElementById('downloadButton');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (fileInput.files.length === 0) {
+        alert('Please select a file!');
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('http://localhost:3000/extract', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        resultDiv.textContent = JSON.stringify(data, null, 2);
+
+        downloadButton.style.display = 'block';
+        downloadButton.onclick = () => {
+          const blob = new Blob([JSON.stringify(data, null, 2)], {
+            type: 'application/json',
+          });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = 'presets.json';
+          link.click();
+        };
+      } else {
+        resultDiv.textContent = 'Error extracting presets.';
+      }
+    });
+  </script>
+</body>
+</html>
