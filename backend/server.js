@@ -33,24 +33,31 @@ const upload = multer({
       }
     },
   });
+
+
+
+// Route to handle file upload and metadata extraction
+app.post("/extract", upload.single("file"), async (req, res) => {
+    try {
+      const filePath = req.file.path;
+      const fileBuffer = await readFile(filePath);
   
-app.post('/extract', upload.single('file'), async (req, res) => {
-  try {
-    const filePath = req.file.path;
-    const fileBuffer = await readFile(filePath);
-
-    const ExifReader = require('exifreader');
-    const tags = ExifReader.load(fileBuffer);
-    
-    // Cleanup uploaded file
-    fs.unlink(filePath, () => {});
-
-    res.json(tags);
-  } catch (error) {
-    console.error('Error processing file:', error);
-    res.status(500).json({ error: 'Failed to extract presets' });
-  }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+      // Extract metadata using ExifReader
+      const ExifReader = require("exifreader");
+      const tags = ExifReader.load(fileBuffer);
+  
+      // Cleanup the uploaded file
+      fs.unlink(filePath, () => {});
+  
+      res.json(tags);
+    } catch (error) {
+      console.error("Error processing file:", error);
+      res.status(500).json({ error: "Failed to process image file" });
+    }
+  });
+  
+  // Start server
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () =>
+    console.log(`Server running on http://localhost:${PORT}`)
+  );
