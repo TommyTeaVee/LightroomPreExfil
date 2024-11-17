@@ -38,9 +38,23 @@ function Upload() {
     }
   };
 
+  const handleDownload = () => {
+    if (data) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "extracted-data.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return (
-    <div className="h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-400 to-blue-600 text-white">
-      <div className="bg-white text-blue-600 shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-lg mx-auto">
+    <div className="h-screen flex flex-col justify-center items-center bg-gradient-to-br from-cyan-400 to-cyan-600 text-white px-4">
+      <div className="bg-white text-cyan-600 shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-lg mx-auto">
         <h2 className="text-2xl font-bold mb-4">Upload Your Image</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -65,7 +79,7 @@ function Upload() {
           </div>
           <button
             type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
             Extract Data
           </button>
@@ -74,9 +88,19 @@ function Upload() {
         {error && <p className="text-red-500 mt-4">{error}</p>}
 
         {data && (
-          <div className="bg-gray-100 p-4 mt-4 rounded text-blue-600">
+          <div className="mt-6">
             <h3 className="text-lg font-bold mb-2">Extracted Data:</h3>
-            <pre className="text-sm overflow-auto">{JSON.stringify(data, null, 2)}</pre>
+            <div className="bg-gray-100 p-4 rounded overflow-auto max-h-60 text-cyan-600">
+              <pre className="text-sm whitespace-pre-wrap">
+                {JSON.stringify(data, null, 2)}
+              </pre>
+            </div>
+            <button
+              onClick={handleDownload}
+              className="mt-4 bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            >
+              Download JSON
+            </button>
           </div>
         )}
       </div>
