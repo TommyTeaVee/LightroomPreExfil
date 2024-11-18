@@ -1,110 +1,88 @@
 const express = require("express");
 const multer = require("multer");
+const sharp = require("sharp");
 const fs = require("fs");
-const path = require("path");
 const xmlbuilder = require("xmlbuilder");
 const cors = require("cors");
-const uuid = require("uuid");
-
 const app = express();
 const port = 35050;
 
-// Enable CORS
-app.use(cors());
-
-// Set up multer for file uploads
+// Configure multer for file upload
 const upload = multer({ dest: "uploads/" });
 
-// Function to create the XMP preset XML matching the given standard
-const createLightroomXMP = (presetName, presetData) => {
-  // Generate a unique UUID for the preset (you can also use a custom UUID generation strategy)
-  const uuidValue = uuid.v4();
+app.use(cors());
 
-  // Create the XMP document with the specified structure
-  const xmp = xmlbuilder.create("x:xmpmeta", { version: "1.0", encoding: "UTF-8" })
-    .att("xmlns:x", "adobe:ns:meta/")
-    .att("x:xmptk", "Adobe XMP Core 5.6-c140 79.160451, 2017/05/06-01:08:21");
+app.post("/extract/preset", upload.single("file"), async (req, res) => {
+  try {
+    const filePath = req.file.path;
 
-  // Add RDF structure
-  const rdf = xmp.ele("rdf:RDF", { "xmlns:rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#" })
-    .ele("rdf:Description", {
-      "rdf:about": "",
-      "xmlns:crs": "http://ns.adobe.com/camera-raw-settings/1.0/",
-      "crs:PresetType": "Normal",
-      "crs:Cluster": "",
-      "crs:UUID": uuidValue,
-      "crs:SupportsAmount": "False",
-      "crs:SupportsColor": "True",
-      "crs:SupportsMonochrome": "True",
-      "crs:SupportsHighDynamicRange": "True",
-      "crs:SupportsNormalDynamicRange": "True",
-      "crs:SupportsSceneReferred": "True",
-      "crs:SupportsOutputReferred": "True",
-      "crs:Version": "11.1",
-      "crs:ProcessVersion": "10.0",
-      "crs:Saturation": presetData.saturation || "0",
-      "crs:Sharpness": presetData.sharpness || "0",
-      "crs:LuminanceSmoothing": presetData.luminanceSmoothing || "0",
-      "crs:ColorNoiseReduction": presetData.colorNoiseReduction || "0",
-      "crs:VignetteAmount": presetData.vignetteAmount || "0",
-      // Include all the other attributes here based on the data you want to extract or input
-    });
+    // Extract metadata using sharp
+    const metadata = await sharp(filePath).metadata();
+    
+    const cameraModel = metadata.exif
+      ? "CameraModel" in metadata.exif
+        ? metadata.exif.CameraModel
+        : "Unknown"
+      : "Unknown";
+    const width = metadata.width || 0;
+    const height = metadata.height || 0;
 
-  // Add preset name
-  rdf.ele("crs:Name")
-    .ele("rdf:Alt")
-    .ele("rdf:li", { "xml:lang": "x-default" }, presetName);
+    // Build the XMP file structure
+    const xml = xmlbuilder
+      .create("x:xmpmeta", { version: "1.0", encoding: "UTF-8" })
+      .att("xmlns:x", "adobe:ns:meta/")
+      .att("x:xmptk", "Adobe XMP Core 5.6-c140 79.160451, 2017/05/06-01:08:21")
+      .ele("rdf:RDF", {
+        "xmlns:rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+      })
+      .ele("rdf:Description", {
+        "rdf:about": "",
+        "xmlns:crs": "http://ns.adobe.com/camera-raw-settings/1.0/",
+        "crs:PresetType": "Normal",
+        "crs:UUID": generateUUID(),
+        "crs:CameraModelRestriction": cameraModel,
+        "crs:Version": "11.1",
+        "crs:ProcessVersion": "10.0",
+        "crs:Saturation": "0",
+        "crs:Sharpness": "0",
+        "crs:LuminanceSmoothing": "0",
+        "crs:ColorNoiseReduction": "0",
+        "crs:VignetteAmount": "0",
+        "crs:Width": width,
+        "crs:Height": height,
+      })
+      .ele("crs:Name")
+      .ele("rdf:Alt")
+      .ele("rdf:li", { "xml:lang": "x-default" }, "Preset for " + cameraModel)
+      .up()
+      .up()
+      .up()
+      .end({ pretty: true });
 
-  // Add other necessary attributes as per your requirement
-  rdf.ele("crs:ToneCurvePV2012")
-    .ele("rdf:Seq")
-    .ele("rdf:li", "0, 0")
-    .ele("rdf:li", "59, 48")
-    .ele("rdf:li", "122, 119")
-    .ele("rdf:li", "181, 184")
-    .ele("rdf:li", "255, 255");
+    // Respond with the generated XML
+    res.setHeader("Content-Type", "application/xml");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=lightroom_preset.xmp"
+    );
+    res.send(xml);
 
-  // Finalize XML document
-  xmp.ele("?xpacket", { "begin": "" });
-
-  return xmp.end({ pretty: true });
-};
-
-// API to extract and create Lightroom XMP preset
-app.post("/extract/preset", upload.single("file"), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "No file uploaded" });
+    // Clean up uploaded file
+    fs.unlinkSync(filePath);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: "An error occurred while processing the image." });
   }
-
-  // Sample data to represent the extracted preset info, adjust according to your actual data
-  const extractedData = {
-    name: "01_Portrait_Contrast",
-    saturation: "0",
-    sharpness: "10",
-    luminanceSmoothing: "0",
-    colorNoiseReduction: "0",
-    vignetteAmount: "0",
-    // Add more values based on metadata or inputs
-  };
-
-  // Generate XMP data using the extracted information
-  const xmpData = createLightroomXMP(extractedData.name, extractedData);
-
-  // Save the generated XMP data to a file
-  const filePath = path.join(__dirname, "presets", `${req.file.filename}.xmp`);
-  fs.writeFileSync(filePath, xmpData);
-
-  // Respond with the download link for the XMP file
-  res.json({
-    message: "Preset extracted successfully",
-    downloadLink: `http://localhost:35050/presets/${req.file.filename}.xmp`,
-  });
 });
 
-// Serve XMP preset files for download
-app.use("/presets", express.static(path.join(__dirname, "presets")));
+// Helper function to generate a unique UUID
+function generateUUID() {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
 
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
-    
