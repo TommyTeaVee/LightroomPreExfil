@@ -5,6 +5,7 @@ function Upload() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [type, setType] = useState("metadata");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFileChange = (event) => setFile(event.target.files[0]);
 
@@ -18,16 +19,17 @@ function Upload() {
       return;
     }
 
+    setIsLoading(true);
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const response = await fetch(`http://localhost:35050/extract/${type}`, {
+      const response = await fetch(`http://localhost:35050/extract/preset`, {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Failed to extract data.");
+      if (!response.ok) throw new Error("Failed to extract preset.");
 
       const result = await response.json();
       setData(result);
@@ -35,83 +37,67 @@ function Upload() {
     } catch (err) {
       setError(err.message);
       setData(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleDownload = () => {
-    if (data) {
-      const blob = new Blob([JSON.stringify(data, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "extracted-data.json";
-      a.click();
-      URL.revokeObjectURL(url);
+    if (data && data.downloadLink) {
+      const link = document.createElement("a");
+      link.href = data.downloadLink;
+      link.download = "lightroom_preset.xmp";
+      link.click();
     }
   };
 
   return (
-    <div
-      className="h-screen bg-cover bg-center bg-no-repeat relative"
-      style={{ backgroundImage: `url('https://karunartist.com/wp-content/uploads/2023/03/Canon-5D-Mark-IV-C-Log.jpg.webp')` }}
-    >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-cyan-700/60 mix-blend-multiply"></div>
+    <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-cyan-400 to-cyan-600 text-white">
+      <div className="bg-white text-cyan-700 shadow-md rounded px-8 pt-6 pb-8 w-full max-w-lg">
+        <h2 className="text-2xl font-bold mb-4">Upload Your Image</h2>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="block text-sm font-bold mb-2">Choose an Image File</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-bold mb-2">Select Data Type</label>
+            <select
+              value={type}
+              onChange={handleTypeChange}
+              className="border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline"
+            >
+              <option value="metadata">Full Metadata</option>
+              <option value="summary">Summary</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            disabled={isLoading}
+          >
+            {isLoading ? "Processing..." : "Extract Preset"}
+          </button>
+        </form>
 
-      {/* Content */}
-      <div className="relative flex flex-col justify-center items-center h-full text-white px-4">
-        <div className="bg-white text-cyan-700 shadow-md rounded px-8 pt-6 pb-8 w-full max-w-lg">
-          <h2 className="text-2xl font-bold mb-4">Upload Your Image</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label className="block text-sm font-bold mb-2">Choose an Image File</label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-bold mb-2">Select Data Type</label>
-              <select
-                value={type}
-                onChange={handleTypeChange}
-                className="border rounded w-full py-2 px-3 text-gray-700 focus:outline-none focus:shadow-outline"
-              >
-                <option value="metadata">Full Metadata</option>
-                <option value="summary">Summary</option>
-              </select>
-            </div>
+        {error && <p className="text-red-500 mt-4">{error}</p>}
+
+        {data && (
+          <div className="mt-6">
+            <h3 className="text-lg font-bold mb-2">Preset Extraction Complete:</h3>
             <button
-              type="submit"
+              onClick={handleDownload}
               className="bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             >
-              Extract Data
+              Download Lightroom Preset
             </button>
-          </form>
-
-          {error && <p className="text-red-500 mt-4">{error}</p>}
-
-          {data && (
-            <div className="mt-6">
-              <h3 className="text-lg font-bold mb-2">Extracted Data:</h3>
-              <div className="bg-gray-100 p-4 rounded overflow-auto max-h-60 text-cyan-600">
-                <pre className="text-sm whitespace-pre-wrap">
-                  {JSON.stringify(data, null, 2)}
-                </pre>
-              </div>
-              <button
-                onClick={handleDownload}
-                className="mt-4 bg-cyan-500 hover:bg-cyan-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              >
-                Download JSON
-              </button>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

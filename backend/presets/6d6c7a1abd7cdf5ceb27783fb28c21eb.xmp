@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmpMeta xmlns="http://ns.adobe.com/xap/1.0/">
+  <rdf:RDF>
+    <rdf:Description rdf:about="" xmlns="http://ns.adobe.com/lightroom/1.0/">
+      <preset>
+        <name>My Lightroom Preset</name>
+        <exposure>0.5</exposure>
+        <contrast>25</contrast>
+        <vibrance>30</vibrance>
+        <clarity>15</clarity>
+      </preset>
+    </rdf:Description>
+  </rdf:RDF>
+</xmpMeta>
