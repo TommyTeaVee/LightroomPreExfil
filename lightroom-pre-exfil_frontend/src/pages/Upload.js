@@ -53,7 +53,7 @@ function Upload() {
   };
 
   return (
-    <div className="h-screen flex flex-col justify-center items-center bg-gradient-to-br from-cyan-400 to-cyan-600 text-white px-4">
+    <div >
       <div className="bg-white text-cyan-600 shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-lg mx-auto">
         <h2 className="text-2xl font-bold mb-4">Upload Your Image</h2>
         <form onSubmit={handleSubmit}>

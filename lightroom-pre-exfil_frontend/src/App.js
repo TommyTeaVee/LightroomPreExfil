@@ -7,7 +7,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50 flex flex-col items-center">
-        <header className="w-full bg-blue-500 text-white p-4">
+        <header className="w-full bg-cyan-500 text-white p-4">
           <nav className="flex justify-center space-x-4">
             <Link to="/" className="hover:underline">Home</Link>
             <Link to="/upload" className="hover:underline">Upload</Link>
