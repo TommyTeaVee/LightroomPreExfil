@@ -22,7 +22,7 @@ function Upload() {
     formData.append("file", file);
 
     try {
-      const response = await fetch(`http://localhost:3000/extract/${type}`, {
+      const response = await fetch(`http://localhost:35050/extract/${type}`, {
         method: "POST",
         body: formData,
       });
